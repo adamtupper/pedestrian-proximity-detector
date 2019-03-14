@@ -28,12 +28,14 @@ def main():
     examples = []
     for dataset_dir in [f.name for f in os.scandir(DATASET_PATH) if f.is_dir()]:
         annotations_path = os.path.join(DATASET_PATH, dataset_dir, 'ann')
-        examples += [os.path.join(dataset_dir, 'ann', f.name) for f in os.scandir(annotations_path)]
-    
+        examples += [os.path.join(dataset_dir, f.name.split('.')[0]) for f in os.scandir(annotations_path)]
+
     with open(OUTPUT_PATH, 'w') as f:
         f.write("\n".join(examples))
 
     print(f'{len(examples)} examples found.')
     print(f'{OUTPUT_PATH} created!')
 
-main()
+
+if __name__ == '__main__':
+    main()
