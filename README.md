@@ -10,3 +10,4 @@ python train.py --logtostderr --train_dir=/media/adam/HDD\ Storage/Datasets/supe
 ```
 python export_inference_graph.py --input_type image_tensor --pipeline_config_path /home/adam/Development/pedestrian-proximity-detector/models/mask_rcnn_inception_v2_coco_2018_01_28/pipeline.config --trained_checkpoint_prefix /media/adam/HDD\ Storage/Datasets/supervisely-persons-tf-records/model.ckpt-3197 --output_directory /home/adam/Development/pedestrian-proximity-detector/models/mask_rcnn_inception_v2_supervisely_2018_03_31
 ```
+Instructions for installing the Intel RealSense SDK: https://github.com/IntelRealSense/librealsense/blob/master/doc/distribution_linux.md
