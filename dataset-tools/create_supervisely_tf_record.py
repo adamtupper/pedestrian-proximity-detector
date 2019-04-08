@@ -58,7 +58,7 @@ def base64_2_mask(s):
     Convert from a base64 encoded string to numpy mask. Provided by Supervisely,
     see https://docs.supervise.ly/ann_format/.
 
-    Args:install opencv
+    Args:
         s: A base64 encoded string of the image mask.
 
     Returns:
