@@ -11,7 +11,7 @@ Since: 12/03/18
 Example usage:
     python create_supervisely_tf_record.py \
         --data_dir='/media/adam/HDD Storage/Datasets/supervisely-persons' \
-        --output_dir='/media/adam/HDD Storage/Datasets/supervisely-persons-tf-records'
+        --output_dir='/media/adam/HDD Storage/Datasets/supervisely-persons-640x480-tf-records'
 """
 
 import hashlib
@@ -47,6 +47,10 @@ flags.DEFINE_boolean('bounding_only', False, 'If True, generates bounding boxes 
 flags.DEFINE_string('mask_type', 'png', 'How to represent instance '
                     'segmentation masks. Options are "png" or "numerical".')
 flags.DEFINE_integer('num_shards', 10, 'Number of TFRecord shards')
+flags.DEFINE_integer('max_img_width', 640, 'The maximum width of images. Wider images will be'
+                     'centrally cropped.')
+flags.DEFINE_integer('max_img_height', 480, 'The maximum height of images. Taller images will be'
+                     'centrally cropped.')
 
 FLAGS = flags.FLAGS
 
@@ -92,6 +96,31 @@ def mask_2_base64(mask):
     return s
 
 
+def crop_center(image, width, height):
+    """
+    Takes an image as a numpy array and crops to the centre region.
+
+    Args:
+        image: A numpy array of the image.
+        width: The desired width of the cropped image.
+        height: The desired height of the cropped image.
+
+    Returns:
+        image_crop: A numpy array of the cropped image.
+    """
+    y, x = image.shape[:2]
+
+    if y > height:
+        start_y = y // 2 - (height // 2)
+        image = image[start_y:start_y + height, :]
+
+    if x > width:
+        start_x = x // 2 - (width // 2)
+        image = image[:, start_x:start_x + width]
+
+    return image
+
+
 def dict_to_tf_example(data,
                        label_map_dict,
                        image_filename,
@@ -124,57 +153,88 @@ def dict_to_tf_example(data,
     Raises:
         ValueError: if the image pointed to by image_filename is not a valid PNG.
     """
-    height = int(data['size']['height'])
-    width = int(data['size']['width'])
-    xmins = []
-    ymins = []
-    xmaxs = []
-    ymaxs = []
+    x_mins = []
+    y_mins = []
+    x_maxs = []
+    y_maxs = []
     classes = []
     classes_text = []
-    truncated = []
-    poses = []
     masks = []
+    image_format = 'png' # If image is JPEG it is converted to PNG
 
-    # Load the image
+    # Identify image extension
     if os.path.exists(os.path.join(image_subdirectory, image_filename + '.jpg')):
-        image_format = 'jpeg'
         image_extension = '.jpg'
     elif os.path.exists(os.path.join(image_subdirectory, image_filename + '.png')):
-        image_format = 'png'
         image_extension = '.png'
     else:
         raise ValueError('Image must be in PNG or JPEG format')
 
-    img_path = os.path.join(image_subdirectory, image_filename + image_extension)
-    with tf.gfile.GFile(img_path, 'rb') as fid:
-        encoded_img = fid.read()
-    encoded_img_io = io.BytesIO(encoded_img)
-    image = PIL.Image.open(encoded_img_io)
+    # Load the image
+    image_path = os.path.join(image_subdirectory, image_filename + image_extension)
+    with tf.gfile.GFile(image_path, 'rb') as fid:
+        encoded_image = fid.read()
+    encoded_image_io = io.BytesIO(encoded_image)
+    image = PIL.Image.open(encoded_image_io)
     if not image.format in ['JPEG', 'PNG']:
         raise ValueError('Image must be in PNG or JPEG format')
-    key = hashlib.sha256(encoded_img).hexdigest()
+
+    # Convert cropped image back to byte string
+    bytes_io = io.BytesIO()
+    image.save(bytes_io, format='PNG')
+    encoded_image = bytes_io.getvalue()
+
+    key = hashlib.sha256(encoded_image).hexdigest()
+
+    # Crop image
+    image_width_og, image_height_og = image.size
+
+    if image_width_og > FLAGS.max_img_width:
+        left = (image_width_og - FLAGS.max_img_width) // 2
+        right = (image_width_og + FLAGS.max_img_width) // 2
+        image = image.crop((left, 0, right, image.size[1]))
+    else:
+        # Still needed for adjusting bounding box
+        left = 0
+
+    if image_height_og > FLAGS.max_img_height:
+        top = (image_height_og - FLAGS.max_img_height) // 2
+        bottom = (image_height_og + FLAGS.max_img_height) // 2
+        image = image.crop((0, top, image.size[0], bottom))
+    else:
+        # Still needed for adjusting bounding box
+        top = 0
+
+    image_width_crop, image_height_crop = image.size
 
     # Extract object data
     if 'objects' in data:
         for obj in data['objects']:
             if obj['classTitle'] == 'person_bmp': # Use only objects with masks
-                mask_origin = obj['bitmap']['origin']
                 mask = base64_2_mask(obj['bitmap']['data'])
-                mask_height = mask.shape[0]
-                mask_width = mask.shape[1]
+
+                # Get original mask location and dimensions
+                mask_origin_og = obj['bitmap']['origin']
+                mask_height_og = mask.shape[0]
+                mask_width_og = mask.shape[1]
+
+                # Update mask location and dimensions for cropped image
+                mask_origin_crop = (max(mask_origin_og[0] - left, 0),
+                                    max(mask_origin_og[1] - top, 0))
+                mask_height_crop = min(mask_height_og, image_height_crop - mask_origin_crop[1])
+                mask_width_crop = min(mask_width_og, image_width_crop - mask_origin_crop[0])
 
                 # Obtain bounding box coords
-                xmin = float(mask_origin[0])
-                xmax = float(mask_origin[0] + mask_width)
-                ymin = float(mask_origin[1])
-                ymax = float(mask_origin[1] + mask_height)
+                x_min = float(mask_origin_crop[0])
+                x_max = float(mask_origin_crop[0] + mask_width_crop)
+                y_min = float(mask_origin_crop[1])
+                y_max = float(mask_origin_crop[1] + mask_height_crop)
 
                 # Normalise bounding box coords
-                xmins.append(xmin / width)
-                ymins.append(ymin / height)
-                xmaxs.append(xmax / width)
-                ymaxs.append(ymax / height)
+                x_mins.append(x_min / image_width_crop)
+                y_mins.append(y_min / image_height_crop)
+                x_maxs.append(x_max / image_width_crop)
+                y_maxs.append(y_max / image_height_crop)
 
                 class_name = 'Person'
                 classes_text.append(class_name.encode('utf8'))
@@ -182,31 +242,38 @@ def dict_to_tf_example(data,
 
                 if not bounding_only:
                     # Create whole-image mask
-                    left_pad = np.zeros((mask_height, mask_origin[0]))
-                    right_pad = np.zeros((mask_height,
-                                          width - mask_width - mask_origin[0]))
-                    top_pad = np.zeros((mask_origin[1], width))
-                    bottom_pad = np.zeros((height - mask_height - mask_origin[1],
-                                           width))
+                    left_pad = np.zeros((mask_height_og, mask_origin_og[0]))
+                    right_pad = np.zeros((mask_height_og,
+                                          image_width_og - mask_width_og - mask_origin_og[0]))
+                    top_pad = np.zeros((mask_origin_og[1], image_width_og))
+                    bottom_pad = np.zeros((image_height_og - mask_height_og - mask_origin_og[1],
+                                           image_width_og))
+
                     mask = np.hstack((left_pad, mask))
                     mask = np.hstack((mask, right_pad))
                     mask = np.vstack((top_pad, mask))
                     mask = np.vstack((mask, bottom_pad))
+                    mask = crop_center(mask, FLAGS.max_img_width, FLAGS.max_img_height)
+
+                    # Check mask dimensions match image
+                    if mask.shape != (image_height_crop, image_width_crop):
+                        logging.error('Mask and image dimensions do not match.')
+                        raise ValueError('Aborting, mask and image dimensions do not match')
 
                     masks.append(mask)
 
     feature_dict = {
-        'image/height': dataset_util.int64_feature(height),
-        'image/width': dataset_util.int64_feature(width),
+        'image/height': dataset_util.int64_feature(image_height_crop),
+        'image/width': dataset_util.int64_feature(image_width_crop),
         'image/filename': dataset_util.bytes_feature(image_filename.encode('utf8')),
         'image/source_id': dataset_util.bytes_feature(image_filename.encode('utf8')),
         'image/key/sha256': dataset_util.bytes_feature(key.encode('utf8')),
-        'image/encoded': dataset_util.bytes_feature(encoded_img),
+        'image/encoded': dataset_util.bytes_feature(encoded_image),
         'image/format': dataset_util.bytes_feature(image_format.encode('utf8')),
-        'image/object/bbox/xmin': dataset_util.float_list_feature(xmins),
-        'image/object/bbox/xmax': dataset_util.float_list_feature(xmaxs),
-        'image/object/bbox/ymin': dataset_util.float_list_feature(ymins),
-        'image/object/bbox/ymax': dataset_util.float_list_feature(ymaxs),
+        'image/object/bbox/xmin': dataset_util.float_list_feature(x_mins),
+        'image/object/bbox/xmax': dataset_util.float_list_feature(x_maxs),
+        'image/object/bbox/ymin': dataset_util.float_list_feature(y_mins),
+        'image/object/bbox/ymax': dataset_util.float_list_feature(y_maxs),
         'image/object/class/text': dataset_util.bytes_list_feature(classes_text),
         'image/object/class/label': dataset_util.int64_list_feature(classes),
     }
@@ -309,7 +376,7 @@ def main(_):
     train_examples = examples_list[:num_train]
     val_examples = examples_list[num_train:]
     logging.info('%d training and %d validation examples.',
-               len(train_examples), len(val_examples))
+                 len(train_examples), len(val_examples))
 
     if not os.path.exists(FLAGS.output_dir):
         os.makedirs(FLAGS.output_dir)
