@@ -28,10 +28,6 @@ from PIL import Image
 import numpy as np
 from pycococreatortools import pycococreatortools
 
-ROOT_DIR = 'train'
-IMAGE_DIR = os.path.join(ROOT_DIR, "shapes_train2018")
-ANNOTATION_DIR = os.path.join(ROOT_DIR, "annotations")
-
 INFO = {
     "description": "Supervisely Persons Dataset",
     "url": "https://supervise.ly/",
