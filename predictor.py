@@ -100,14 +100,11 @@ class PedestrianPredictor(object):
         top_predictions = self.select_top_predictions(predictions)
 
         result = image.copy()
-        if self.show_mask_heatmaps:
-            return self.create_mask_montage(result, top_predictions)
         result = self.overlay_boxes(result, top_predictions)
-        if self.cfg.MODEL.MASK_ON:
-            result = self.overlay_mask(result, top_predictions)
+        result = self.overlay_mask(result, top_predictions)
         result = self.overlay_class_names(result, top_predictions)
 
-        return result
+        return result, top_predictions
 
     def compute_prediction(self, original_image):
         """

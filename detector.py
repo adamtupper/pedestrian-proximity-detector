@@ -23,7 +23,9 @@ import numpy as np
 import cv2 as cv
 from PIL import Image
 from maskrcnn_benchmark.config import cfg
+from maskrcnn_benchmark import layers as L
 from predictor import PedestrianPredictor
+import matplotlib.pyplot as plt
 
 # Specify program arguments
 parser = argparse.ArgumentParser(description="Pedestrian Proximiy Detector")
@@ -104,11 +106,20 @@ def main():
                                           cv.COLORMAP_JET)
 
         # Perform instance segmentation on RGB image
-        segmented_image = predictor.run_on_opencv_image(color_image)
+        segmented_image, predictions = predictor.run_on_opencv_image(color_image)
 
         cv.imshow('Segmented', segmented_image)
         cv.imshow('Colour', color_image)
         cv.imshow('Depth', depth_colormap)
+        masks = predictions.get_field("mask").numpy()
+        if len(masks) > 0:
+            mask = masks[0]
+            thresh = mask[0, :, :, None]
+            _, contours, hierarchy = cv.findContours(
+                thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE
+            )
+            image = cv.drawContours(color_image, contours, -1, (0, 0, 255), 3)
+            cv.imshow('Mask', image)
 
         if cv.waitKey(1) & 0xFF == ord('q'):
             # Quit if 'q' key is pressed
