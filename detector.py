@@ -124,14 +124,11 @@ def main():
         # Perform instance segmentation on RGB image
         segmented_image = predictor.run_on_opencv_image(color_image, depth_image * depth_scale)
 
-        cv.imshow('Segmented', segmented_image)
-        cv.imshow('Colour', color_image)
-        cv.imshow('Depth', depth_colormap)
+        output_image = np.hstack((segmented_image, depth_colormap))
+        cv.imshow('Pedestrian Proximity Detector', output_image)
 
         if args.output_file is not None:
-            output_frame = np.hstack((segmented_image, depth_colormap))
-            cv.imshow('Out', output_frame)
-            out.write(output_frame)
+            out.write(output_image)
 
         if cv.waitKey(1) & 0xFF == ord('q'):
             # Quit if 'q' key is pressed
