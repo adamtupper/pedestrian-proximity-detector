@@ -93,6 +93,10 @@ def main():
     profile = pipeline.start(config) # Start streaming
     align = rs.align(rs.stream.color) # Align infrared and depth images to colour image
 
+    # Get depth sensor and scale information
+    depth_sensor = profile.get_device().first_depth_sensor()
+    depth_scale = depth_sensor.get_depth_scale()
+
     while True:
         frames = pipeline.wait_for_frames() # Read images from camera
         aligned_frames = align.process(frames)
@@ -101,12 +105,15 @@ def main():
         depth_image = np.asanyarray(aligned_frames.get_depth_frame().get_data())
         color_image = np.asanyarray(aligned_frames.get_color_frame().get_data())
 
+        # Get depth intrinsics
+        depth_intrinsics = frames.get_depth_frame().profile.as_video_stream_profile().intrinsics
+
         # Colourise depth map for viewing
         depth_colormap = cv.applyColorMap(cv.convertScaleAbs(depth_image, alpha=0.03),
                                           cv.COLORMAP_JET)
 
         # Perform instance segmentation on RGB image
-        segmented_image, predictions = predictor.run_on_opencv_image(color_image)
+        segmented_image = predictor.run_on_opencv_image(color_image, depth_image * depth_scale)
 
         cv.imshow('Segmented', segmented_image)
         cv.imshow('Colour', color_image)

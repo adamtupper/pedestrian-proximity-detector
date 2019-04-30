@@ -87,7 +87,7 @@ class PedestrianPredictor(object):
         )
         return transform
 
-    def run_on_opencv_image(self, image):
+    def run_on_opencv_image(self, colour_image, depth_image):
         """
         Arguments:
             image (np.ndarray): an image as returned by OpenCV
@@ -97,15 +97,15 @@ class PedestrianPredictor(object):
                 of the detection properties can be found in the fields of
                 the BoxList via `prediction.fields()`
         """
-        predictions = self.compute_prediction(image)
+        predictions = self.compute_prediction(colour_image)
         top_predictions = self.select_top_predictions(predictions)
 
-        result = image.copy()
+        result = colour_image.copy()
         result = self.overlay_boxes(result, top_predictions)
         result = self.overlay_mask(result, top_predictions)
-        result = self.overlay_class_names(result, top_predictions)
+        result = self.overlay_labels(result, depth_image, top_predictions)
 
-        return result, top_predictions
+        return result
 
     def compute_prediction(self, original_image):
         """
@@ -259,27 +259,33 @@ class PedestrianPredictor(object):
                 result[start_y:end_y, start_x:end_x] = masks[y, x]
         return cv2.applyColorMap(result.numpy(), cv2.COLORMAP_JET)
 
-    def overlay_class_names(self, image, predictions):
+    def overlay_labels(self, colour_image, depth_image, predictions):
         """
-        Adds detected class names and scores in the positions defined by the
-        top-left corner of the predicted bounding box
+        Adds detected class names, scores and the average distance in the
+        positions defined by the top-left corner of the predicted bounding box.
 
         Arguments:
             image (np.ndarray): an image as returned by OpenCV
             predictions (BoxList): the result of the computation by the model.
                 It should contain the field `scores` and `labels`.
         """
+        masks = predictions.get_field("mask").numpy()
         scores = predictions.get_field("scores").tolist()
         labels = predictions.get_field("labels").tolist()
         labels = [self.CATEGORIES[i] for i in labels]
         boxes = predictions.bbox
 
-        template = "{}: {:.2f}"
-        for box, score, label in zip(boxes, scores, labels):
+        template = "{}: {:.2f} ({:.2f} m)"
+        for box, score, label, mask in zip(boxes, scores, labels, masks):
+            # Get average depth value for mask
+            mask = mask[0, :, :, None]
+            rows, cols, _ = np.nonzero(mask)
+            mean_distance = np.mean(depth_image[rows, cols])
+
             x, y = box[:2]
-            s = template.format(label, score)
+            s = template.format(label, score, mean_distance)
             cv2.putText(
-                image, s, (x, y), cv2.FONT_HERSHEY_SIMPLEX, .5, (255, 255, 255), 1
+                colour_image, s, (x, y), cv2.FONT_HERSHEY_SIMPLEX, .5, (255, 255, 255), 1
             )
 
-        return image
+        return colour_image
