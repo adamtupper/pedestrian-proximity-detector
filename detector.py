@@ -111,12 +111,6 @@ def main():
         cv.imshow('Segmented', segmented_image)
         cv.imshow('Colour', color_image)
         cv.imshow('Depth', depth_colormap)
-        masks = predictions.get_field("mask").numpy()
-        if len(masks) > 0:
-            mask = masks[0]
-            mask = mask[0, :, :, None]
-            mask[mask==1] = 255
-            cv.imshow('Mask', mask)
 
         if cv.waitKey(1) & 0xFF == ord('q'):
             # Quit if 'q' key is pressed
