@@ -6,6 +6,7 @@ Author: Adam Tupper (adapted from Facebook's Mask R-CNN Benchmark Demo)
 Since: 29/04/19
 """
 
+import numpy as np
 import cv2
 import torch
 from torchvision import transforms as T
@@ -197,7 +198,7 @@ class PedestrianPredictor(object):
 
     def overlay_mask(self, image, predictions):
         """
-        Adds the instances contours for each predicted object.
+        Adds the instance masks for each predicted object.
         Each label has a different color.
 
         Arguments:
@@ -211,11 +212,12 @@ class PedestrianPredictor(object):
         colors = self.compute_colors_for_labels(labels).tolist()
 
         for mask, color in zip(masks, colors):
-            thresh = mask[0, :, :, None]
-            _, contours, hierarchy = cv2.findContours(
-                thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
-            )
-            image = cv2.drawContours(image, contours, -1, color, 3)
+            mask = mask[0, :, :, None]
+            mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2RGB)
+            mask[np.where((mask == [1, 1, 1]).all(axis=2))] = color
+
+            alpha = 0.5
+            cv2.addWeighted(mask, alpha, image, 1 - alpha, 0, image)
 
         composite = image
 
