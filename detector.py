@@ -11,7 +11,8 @@ Example usage:
     python detector.py \
         --model-config [config.yaml] \
         --confidence-threshold 0.7 \
-        --video-file [input.bag]
+        --video-file [input.bag] \
+        --output-file [video.avi]
 """
 
 import sys
@@ -46,6 +47,11 @@ parser.add_argument(
     metavar="FILE",
     help="A video file to process instead of a live camera feed",
 )
+parser.add_argument(
+    "--output-file",
+    metavar="FILE",
+    help="A path to save the annotated video file to",
+)
 
 
 def load_image_into_numpy_array(image):
@@ -78,6 +84,12 @@ def main():
         confidence_threshold=args.confidence_threshold
     )
 
+    # Setup video writer (if required)
+    if args.output_file is not None:
+        print('Saving annotated stream to', args.output_file)
+        fourcc = cv.VideoWriter_fourcc(*'XVID')
+        out = cv.VideoWriter(args.output_file, fourcc, 30, (1280, 480))
+
     # Configure RealSense camera
     config = rs.config()
 
@@ -105,9 +117,6 @@ def main():
         depth_image = np.asanyarray(aligned_frames.get_depth_frame().get_data())
         color_image = np.asanyarray(aligned_frames.get_color_frame().get_data())
 
-        # Get depth intrinsics
-        depth_intrinsics = frames.get_depth_frame().profile.as_video_stream_profile().intrinsics
-
         # Colourise depth map for viewing
         depth_colormap = cv.applyColorMap(cv.convertScaleAbs(depth_image, alpha=0.03),
                                           cv.COLORMAP_JET)
@@ -119,11 +128,17 @@ def main():
         cv.imshow('Colour', color_image)
         cv.imshow('Depth', depth_colormap)
 
+        if args.output_file is not None:
+            output_frame = np.hstack((segmented_image, depth_colormap))
+            cv.imshow('Out', output_frame)
+            out.write(output_frame)
+
         if cv.waitKey(1) & 0xFF == ord('q'):
             # Quit if 'q' key is pressed
             break
 
     pipeline.stop() # Stop recording
+    out.release() # Release output file
     cv.destroyAllWindows() # Close all windows
 
 
