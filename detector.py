@@ -114,12 +114,9 @@ def main():
         masks = predictions.get_field("mask").numpy()
         if len(masks) > 0:
             mask = masks[0]
-            thresh = mask[0, :, :, None]
-            _, contours, hierarchy = cv.findContours(
-                thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE
-            )
-            image = cv.drawContours(color_image, contours, -1, (0, 0, 255), 3)
-            cv.imshow('Mask', image)
+            mask = mask[0, :, :, None]
+            mask[mask==1] = 255
+            cv.imshow('Mask', mask)
 
         if cv.waitKey(1) & 0xFF == ord('q'):
             # Quit if 'q' key is pressed
