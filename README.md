@@ -42,6 +42,8 @@ From the `maskrcnn-benchmark directory`, execute:
 python setup.py install
 ```
 
+Note: The package must be reinstalled if anything in the `maskrcnn_benchmark` directory is changed.
+
 ### 2. Remove the final layers from the pre-trained COCO model
 
 From the `pedestrian-proximity-detector/model-tools` directory, excute the following:
@@ -61,3 +63,11 @@ python tools/train_net.py --config-file ../pedestrian-proximity-detector/models/
 ```
 
 The trained model file will be placed in the `pedestrian-proximity-detector/models/mask_rcnn_resnet_50_supervisely/` directory.
+
+## Evaluate the trained model on COCO dataset
+
+From the `maskrcnn-benchmark` directory, run:
+
+```
+python tools/test_net.py --config-file ../pedestrian-proximity-detector/models/mask_rcnn_resnet_50_supervisely trained_supervisely_coco_eval_config.yaml
+```
