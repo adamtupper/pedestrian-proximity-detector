@@ -1,23 +1,63 @@
-# pedestrian-proximity-detector
+# Pedestrian Proximity Detector
 
-Download links for pretrained Tensorflow Object Detection API models can be found [here](https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md).
+## Intel RealSense D435 Setup
 
-1. Generate TensorFlow records for Supervisely Persons dataset:
+Instructions for installing the Intel RealSense SDK can be found [here](https://github.com/IntelRealSense/librealsense/blob/master/doc/distribution_linux.md).
 
-```
-python create_supervisely_tf_record.py --data_dir='/media/adam/HDD Storage/Datasets/supervisely-persons' --output_dir='/media/adam/HDD Storage/Datasets/supervisely-persons-640x480-tf-records'
-```
+## Converting the Supervisely dataset into COCO format
 
-2. Train Mask R-CNN model:
+From the `pedestrian-proximity-detector/dataset-tools` directory execute:
 
 ```
-python train.py --logtostderr --train_dir=/media/adam/HDD\ Storage/Datasets/supervisely-persons-640x480-tf-records ^ --pipeline_config_path=/home/adam/Development/pedestrian-proximity-detector/models/mask_rcnn_inception_v2_coco_2018_01_28/pipeline.config
+python create_supervisely_examples_list.py [path to dataset directory]
 ```
 
-3. Export inference graph:
+This will create a `trainval.txt` file containg the list of examples (images) in the Supervisely Persons dataset. Then, from the `pedestrian-proximity-detector/dataset-tools` directory, execute:
 
 ```
-python export_inference_graph.py --input_type image_tensor --pipeline_config_path /home/adam/Development/pedestrian-proximity-detector/models/mask_rcnn_inception_v2_coco_2018_01_28/pipeline.config --trained_checkpoint_prefix /media/adam/HDD\ Storage/Datasets/supervisely-persons-640x480-tf-records/model.ckpt-3197 --output_directory /home/adam/Development/pedestrian-proximity-detector/models/mask_rcnn_inception_v2_supervisely_640x480_2018_04_10
+python supervisely_to_coco.py \
+    [root directory] \
+    [path from root to dataset directory] \
+    trainval.txt
 ```
 
-Instructions for installing the Intel RealSense SDK: https://github.com/IntelRealSense/librealsense/blob/master/doc/distribution_linux.md
+The first arguement is the path to the directory which holds the Supervisely Persons dataset, the second arguement is the directory containing the Supervisely Persons dataset (in the format/structure downloaded from supervisely) and the is the trainval.txt examples file generated inn the previous step.
+
+## Training the Instance Segmentation (Mask R-CNN) Model
+
+### 1. Fetch the  `maskrcnn-benchmark` repository
+
+If not already downloaded, clone the [maskrcnn-benchmark](https://github.com/adamtupper/maskrcnn-benchmark) repository in the parent directory of this directory and checkout the `supervisely` branch. You should have the following directory structure:
+
+```
+maskrcnn-benchmark/
+pedestrian-proximity-detector/
+```
+
+### 3. Install the `maskrcnn_benchmark` Python package
+
+From the `maskrcnn-benchmark directory`, execute:
+
+```
+python setup.py install
+```
+
+### 2. Remove the final layers from the pre-trained COCO model
+
+From the `pedestrian-proximity-detector/model-tools` directory, excute the following:
+
+```
+python trim_cnn_layers.py
+```
+
+This will create a PyTorch model file with no final layers in the `pedestrian-proximity-detector/models/mask_rcnn_resnet_50_supervisely/` directory.
+
+### 3. Training the model
+
+From inside the `maskrcnn-benchmark directory` execute:
+
+```
+python tools/train_net.py --config-file ../pedestrian-proximity-detector/models/mask_rcnn_resnet_50_supervisely/supervisely_config.yaml
+```
+
+The trained model file will be placed in the `pedestrian-proximity-detector/models/mask_rcnn_resnet_50_supervisely/` directory.
