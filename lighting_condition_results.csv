@@ -14,8 +14,8 @@ full_daylight,22279,4.089,,,full_daylight_4m.bag
 full_daylight,22279,3.039,,,full_daylight_3m.bag
 full_daylight,22279,2.043,,,full_daylight_2m.bag
 full_daylight,22279,1.027,,,full_daylight_1m.bag
-direct_sunlight,,5,,,direct_sunlight_5m.bag
-direct_sunlight,,4,,,direct_sunlight_4m.bag
-direct_sunlight,,3,,,direct_sunlight_3m.bag
-direct_sunlight,,2,,,direct_sunlight_2m.bag
-direct_sunlight,,1,,,direct_sunlight_1m.bag
+direct_sunlight,102837,5,,,direct_sunlight_5m.bag
+direct_sunlight,102838,4,,,direct_sunlight_4m.bag
+direct_sunlight,102839,3,,,direct_sunlight_3m.bag
+direct_sunlight,102840,2,,,direct_sunlight_2m.bag
+direct_sunlight,102841,1,,,direct_sunlight_1m.bag
