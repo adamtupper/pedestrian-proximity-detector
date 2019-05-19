@@ -4,6 +4,20 @@
 
 Instructions for installing the Intel RealSense SDK can be found [here](https://github.com/IntelRealSense/librealsense/blob/master/doc/distribution_linux.md).
 
+## Running the detector
+
+From the `pedestrian-proximity-detector` directory, execute:
+
+```
+python detector.py \
+    --model-config [config.yaml] \
+    --confidence-threshold 0.7 \
+    --video-file [input.bag] \
+    --output-file [video.avi]
+```
+
+All parameters apart from the model config are optional. The default value for the confidence threshold is 0.7. If no video file is provided, the detector will attempt to stream from a connect D435 camera.
+
 ## Converting the Supervisely dataset into COCO format
 
 From the `pedestrian-proximity-detector/dataset-tools` directory execute:

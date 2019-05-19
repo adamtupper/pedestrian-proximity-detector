@@ -135,8 +135,9 @@ def main():
             break
 
     pipeline.stop() # Stop recording
-    out.release() # Release output file
     cv.destroyAllWindows() # Close all windows
+    if args.output_file is not None:
+        out.release() # Release output file (if required)
 
 
 if __name__ == '__main__':
