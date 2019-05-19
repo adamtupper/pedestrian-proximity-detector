@@ -1,5 +1,13 @@
 # Jupyter
 *.ipynb_checkpoints/
+__pycache__/
 
 # RGB-D footage
 data/rgbd-data/
+
+# Trained model artefacts
+models/mask_rcnn_resnet_50_supervisely/inference/
+models/mask_rcnn_resnet_50_supervisely/last_checkpoint
+models/mask_rcnn_resnet_50_supervisely/log.txt
+models/mask_rcnn_resnet_50_supervisely/mask_rcnn_R-50-FPN_1x_detectron_no_last_layers.pth
+models/mask_rcnn_resnet_50_supervisely/model_final.pth
