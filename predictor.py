@@ -277,13 +277,16 @@ class PedestrianPredictor(object):
 
         template = "{}: {:.2f} ({:.2f} m)"
         for box, score, label, mask in zip(boxes, scores, labels, masks):
-            # Get average depth value for mask
+            # Get median depth value for mask
             mask = mask[0, :, :, None]
             rows, cols, _ = np.nonzero(mask)
-            mean_distance = np.mean(depth_image[rows, cols])
+            depth_values = depth_image[rows, cols]
+            depth_values.flatten()
+            depth_values = np.sort(depth_values)
+            median_distance = np.median(depth_values)
 
             x, y = box[:2]
-            s = template.format(label, score, mean_distance)
+            s = template.format(label, score, median_distance)
             cv2.putText(
                 colour_image, s, (x, y), cv2.FONT_HERSHEY_SIMPLEX, .5, (255, 255, 255), 1
             )

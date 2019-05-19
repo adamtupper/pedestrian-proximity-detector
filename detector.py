@@ -109,12 +109,23 @@ def main():
     depth_sensor = profile.get_device().first_depth_sensor()
     depth_scale = depth_sensor.get_depth_scale()
 
+    # Setup depth post-processing filters
+    spat_filter = rs.spatial_filter() # Spatial - edge-preserving spatial smoothing
+    hole_filter = rs.hole_filling_filter() # Hole - fill holes in depth map
+    temp_filter = rs.temporal_filter() # Temporal - reduces temporal noise
+
     while True:
         frames = pipeline.wait_for_frames() # Read images from camera
         aligned_frames = align.process(frames)
 
-        # Get aligned frames as Numpy arrays
-        depth_image = np.asanyarray(aligned_frames.get_depth_frame().get_data())
+        # Post-process depth frame
+        depth_frame = aligned_frames.get_depth_frame()
+        depth_frame = spat_filter.process(depth_frame)
+        depth_frame = hole_filter.process(depth_frame)
+        depth_frame = temp_filter.process(depth_frame)
+
+        # Convert aligned frames to images (numpy arrays)
+        depth_image = np.asanyarray(depth_frame.get_data())
         color_image = np.asanyarray(aligned_frames.get_color_frame().get_data())
 
         # Colourise depth map for viewing
