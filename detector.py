@@ -18,6 +18,7 @@ Example usage:
 import sys
 import os
 import argparse
+import time
 
 import pyrealsense2 as rs
 import numpy as np
@@ -115,6 +116,8 @@ def main():
     temp_filter = rs.temporal_filter() # Temporal - reduces temporal noise
 
     while True:
+        start = time.time()
+
         frames = pipeline.wait_for_frames() # Read images from camera
         aligned_frames = align.process(frames)
 
@@ -137,6 +140,10 @@ def main():
 
         output_image = np.hstack((segmented_image, depth_colormap))
         cv.imshow('Pedestrian Proximity Detector', output_image)
+
+        end = time.time()
+
+        print(f'FPS = {1 / (end - start):.2f}', end='\r')
 
         if args.output_file is not None:
             out.write(output_image)
