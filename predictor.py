@@ -57,35 +57,6 @@ class PedestrianPredictor(object):
         self.show_mask_heatmaps = show_mask_heatmaps
         self.masks_per_dim = masks_per_dim
 
-    def build_transform(self):
-        """
-        Creates a basic transformation that was used to train the models
-        """
-        cfg = self.cfg
-
-        # we are loading images with OpenCV, so we don't need to convert them
-        # to BGR, they are already! So all we need to do is to normalize
-        # by 255 if we want to convert to BGR255 format, or flip the channels
-        # if we want it to be in RGB in [0-1] range.
-        if cfg.INPUT.TO_BGR255:
-            to_bgr_transform = T.Lambda(lambda x: x * 255)
-        else:
-            to_bgr_transform = T.Lambda(lambda x: x[[2, 1, 0]])
-
-        normalize_transform = T.Normalize(
-            mean=cfg.INPUT.PIXEL_MEAN, std=cfg.INPUT.PIXEL_STD
-        )
-
-        transform = T.Compose(
-            [
-                T.ToPILImage(),
-                T.Resize(self.min_image_size),
-                T.ToTensor(),
-                to_bgr_transform,
-                normalize_transform,
-            ]
-        )
-        return transform
 
     def run_on_opencv_image(self, colour_image, depth_image):
         """
@@ -223,41 +194,6 @@ class PedestrianPredictor(object):
 
         return composite
 
-    def create_mask_montage(self, image, predictions):
-        """
-        Create a montage showing the probability heatmaps for each one one of the
-        detected objects
-
-        Arguments:
-            image (np.ndarray): an image as returned by OpenCV
-            predictions (BoxList): the result of the computation by the model.
-                It should contain the field `mask`.
-        """
-        masks = predictions.get_field("mask")
-        masks_per_dim = self.masks_per_dim
-        masks = L.interpolate(
-            masks.float(), scale_factor=1 / masks_per_dim
-        ).byte()
-        height, width = masks.shape[-2:]
-        max_masks = masks_per_dim ** 2
-        masks = masks[:max_masks]
-        # handle case where we have less detections than max_masks
-        if len(masks) < max_masks:
-            masks_padded = torch.zeros(max_masks, 1, height, width, dtype=torch.uint8)
-            masks_padded[: len(masks)] = masks
-            masks = masks_padded
-        masks = masks.reshape(masks_per_dim, masks_per_dim, height, width)
-        result = torch.zeros(
-            (masks_per_dim * height, masks_per_dim * width), dtype=torch.uint8
-        )
-        for y in range(masks_per_dim):
-            start_y = y * height
-            end_y = (y + 1) * height
-            for x in range(masks_per_dim):
-                start_x = x * width
-                end_x = (x + 1) * width
-                result[start_y:end_y, start_x:end_x] = masks[y, x]
-        return cv2.applyColorMap(result.numpy(), cv2.COLORMAP_JET)
 
     def overlay_labels(self, colour_image, depth_image, predictions):
         """
