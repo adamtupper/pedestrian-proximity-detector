@@ -37,7 +37,7 @@ python supervisely_to_coco.py \
 
 The first arguement is the path to the directory which holds the Supervisely Persons dataset, the second arguement is the directory containing the Supervisely Persons dataset (in the format/structure downloaded from supervisely) and the is the trainval.txt examples file generated inn the previous step.
 
-## Training the Instance Segmentation (Mask R-CNN) Model
+## Training the Pedestrian Segmentation (Mask R-CNN) Model
 
 ### 1. Fetch the  `maskrcnn-benchmark` repository
 
