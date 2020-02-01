@@ -4,6 +4,25 @@
 
 This paper presents a novel method for pedestrian detection and distance estimation using RGB-D data. We use Mask R-CNN for instance-level pedestrian segmentation, and the Semiglobal Matching algorithm for computing depth information from a pair of infrared images captured by an Intel RealSense D435 stereo vision depth camera. The resulting depth map is post-processed using both spatial and temporal edge-preserving filters and spatial hole-filling to mitigate erroneous or missing depth values. The distance to each pedestrian is estimated using the median depth value of the pixels in the depth map covered by the predicted mask. Unlike previous work, our method is evaluated on, and performs well across, a wide spectrum of outdoor lighting conditions. Our proposed technique is able to detect and estimate the distance of pedestrians within 5m with an average accuracy of 87.7\%.
 
+## Citation
+
+Please cite using:
+
+```
+@INPROCEEDINGS{8961013,
+author={A. {Tupper} and R. {Green}},
+booktitle={2019 International Conference on Image and Vision Computing New Zealand (IVCNZ)},
+title={Pedestrian Proximity Detection using RGB-D Data},
+year={2019},
+volume={},
+number={},
+pages={1-6},
+keywords={},
+doi={10.1109/IVCNZ48456.2019.8961013},
+ISSN={2151-2191},
+month={Dec},}
+```
+
 ## Intel RealSense D435 Setup
 
 Instructions for installing the Intel RealSense SDK can be found [here](https://github.com/IntelRealSense/librealsense/blob/master/doc/distribution_linux.md).
