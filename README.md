@@ -1,4 +1,6 @@
-# Pedestrian Proximity Detector
+# Pedestrian Proximity Detection using RGB-D Data
+
+The paper associated with this work was published at the 2019 International Conference on Image and Vision Computing New Zealand (IVCNZ), and can be found here: https://ieeexplore.ieee.org/abstract/document/8961013
 
 ## Abstract
 
